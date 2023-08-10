@@ -161,6 +161,6 @@ cython_debug/
 
 
 # Project_data
-input_data/2023/
+input_data/
 processed_data/
 .DS_Store
