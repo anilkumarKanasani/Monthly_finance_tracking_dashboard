@@ -1,0 +1,26 @@
+﻿Sub-category;Category;Category Type
+Salary;Salary;Income
+Tax less Income;Extra Income;Income
+PDP Income;Extra Income;Income
+Office Travel Income;Extra Income;Income
+Tax;Income Tax;State Cuttings
+Health Insurance;Health Insurance;State Cuttings
+Pension;Pension;State Cuttings
+Unemployment Fund;Charity;State Cuttings
+Nursing Care;Charity;State Cuttings
+Rent;Living Expenses;Expense
+Phone & WiFi;Living Expenses;Expense
+Groceries;Living Expenses;Expense
+Travel Pass;Living Expenses;Expense
+Gifts;Charity;Expense
+Entertainment;Extra Expenses;Expense
+Furnishings;Extra Expenses;Expense
+Family & Kids;Extra Expenses;Expense
+Restaurant;Extra Expenses;Expense
+Taxi;Extra Expenses;Expense
+Cloths;Extra Expenses;Expense
+Gym & Self grooming;Extra Expenses;Expense
+PDP Spending;PDP Expenses;Expense
+Office Travel Spending;PDP Expenses;Expense
+To India;India Savings;Savings
+Company Pension;Europe Savings;Savings
