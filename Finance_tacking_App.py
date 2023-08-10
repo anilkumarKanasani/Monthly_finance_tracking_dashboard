@@ -56,33 +56,33 @@ kpi_percent_dict = dict(zip(df_yearly_kpi["Sub-category"], df_yearly_kpi["percen
 ) = st.columns(7)
 
 text_1_col.subheader("Income Categories")
-sal_col.image("input_data/images/Salary.png", width=100)
+sal_col.image("supporting_data/images/Salary.png", width=100)
 sal_col.metric(
     "Salary Income",
     round(kpi_dict["Salary"], 2),
     round(kpi_percent_dict["Salary"], 2),
 )
-Tax_less_income_col.image("input_data/images/Tax_less_income.png", width=100)
+Tax_less_income_col.image("supporting_data/images/Tax_less_income.png", width=100)
 Tax_less_income_col.metric(
     "Tax less Income",
     round(kpi_dict["Tax less Income"], 2),
     round(kpi_percent_dict["Tax less Income"], 2),
 )
 
-PDP_income_col.image("input_data/images/PDP_Income.png", width=100)
+PDP_income_col.image("supporting_data/images/PDP_Income.png", width=100)
 PDP_income_col.metric(
     "PDP Income",
     round(kpi_dict["PDP Income"], 2),
     "Excluded from total & percentage calculation",
 )
-Off_travel_income_col.image("input_data/images/office_travel.png", width=100)
+Off_travel_income_col.image("supporting_data/images/office_travel.png", width=100)
 Off_travel_income_col.metric(
     "Office Travel Income",
     round(kpi_dict["Office Travel Income"], 2),
     "Excluded from total & percentage calculation",
 )
 
-Total_Income_pdp_col.image("input_data/images/total_income.png", width=100)
+Total_Income_pdp_col.image("supporting_data/images/total_income.png", width=100)
 Total_Income_pdp_col.metric(
     "Total Gross + PDP Income",
     round(
@@ -93,7 +93,7 @@ Total_Income_pdp_col.metric(
         2,
     ),
 )
-Total_Income_col.image("input_data/images/total_income.png", width=100)
+Total_Income_col.image("supporting_data/images/total_income.png", width=100)
 Total_Income_col.metric(
     "Total Gross Income",
     round(
@@ -119,37 +119,37 @@ st.divider()
 ) = st.columns(7)
 
 text_2_col.subheader("State Cuttings Categories")
-Income_Tax_col.image("input_data/images/Income_tax.png", width=100)
+Income_Tax_col.image("supporting_data/images/Income_tax.png", width=100)
 Income_Tax_col.metric(
     "Income Tax",
     round(kpi_dict["Tax"], 2),
     round(kpi_percent_dict["Tax"], 2),
 )
-Health_Insurance_col.image("input_data/images/health_insurance.png", width=100)
+Health_Insurance_col.image("supporting_data/images/health_insurance.png", width=100)
 Health_Insurance_col.metric(
     "Health Insurance",
     round(kpi_dict["Health Insurance"], 2),
     round(kpi_percent_dict["Health Insurance"], 2),
 )
-Pension_col.image("input_data/images/pension.png", width=100)
+Pension_col.image("supporting_data/images/pension.png", width=100)
 Pension_col.metric(
     "Pension",
     round(kpi_dict["Pension"], 2),
     round(kpi_percent_dict["Pension"], 2),
 )
-Unemployment_fund_col.image("input_data/images/unemplyment_fund.png", width=100)
+Unemployment_fund_col.image("supporting_data/images/unemplyment_fund.png", width=100)
 Unemployment_fund_col.metric(
     "Unemployment Fund",
     round(kpi_dict["Unemployment Fund"], 2),
     round(kpi_percent_dict["Unemployment Fund"], 2),
 )
-Nursing_care_col.image("input_data/images/health_insurance.png", width=100)
+Nursing_care_col.image("supporting_data/images/health_insurance.png", width=100)
 Nursing_care_col.metric(
     "Nursing Care",
     round(kpi_dict["Nursing Care"], 2),
     round(kpi_percent_dict["Nursing Care"], 2),
 )
-Total_state_cut_col.image("input_data/images/Total_cuttings.png", width=100)
+Total_state_cut_col.image("supporting_data/images/Total_cuttings.png", width=100)
 Total_state_cut_col.metric(
     "Total State Cuttings",
     round(
@@ -198,35 +198,35 @@ tot_living_exp_per = (
 ) = st.columns(7)
 
 text_3_col.subheader("Living Expenses Categories")
-Rent_col.image("input_data/images/rent.png", width=100)
+Rent_col.image("supporting_data/images/rent.png", width=100)
 Rent_col.metric(
     "Room Rent",
     round(kpi_dict["Rent"], 2),
     round(kpi_percent_dict["Rent"], 2),
 )
-Phne_wifi_col.image("input_data/images/cell_phone.png", width=100)
+Phne_wifi_col.image("supporting_data/images/cell_phone.png", width=100)
 Phne_wifi_col.metric(
     "Phone & WiFi",
     round(kpi_dict["Phone & WiFi"], 2),
     round(kpi_percent_dict["Phone & WiFi"], 2),
 )
-Groceseries_col.image("input_data/images/groceries.png", width=100)
+Groceseries_col.image("supporting_data/images/groceries.png", width=100)
 Groceseries_col.metric(
     "Groceseries",
     round(kpi_dict["Groceries"], 2),
     round(kpi_percent_dict["Groceries"], 2),
 )
-Monthly_travel_col.image("input_data/images/Monthly_travel.png", width=100)
+Monthly_travel_col.image("supporting_data/images/Monthly_travel.png", width=100)
 Monthly_travel_col.metric(
     "Monthly Travel",
     round(kpi_dict["Travel Pass"], 2),
     round(kpi_percent_dict["Travel Pass"], 2),
 )
-Gifts_col.image("input_data/images/unemplyment_fund.png", width=100)
+Gifts_col.image("supporting_data/images/unemplyment_fund.png", width=100)
 Gifts_col.metric(
     "Gifts", round(kpi_dict["Gifts"], 2), round(kpi_percent_dict["Gifts"], 2)
 )
-Total_living_exp_col.image("input_data/images/total_living.png", width=100)
+Total_living_exp_col.image("supporting_data/images/total_living.png", width=100)
 Total_living_exp_col.metric(
     "Total Living Expenses",
     round(tot_living_exp, 2),
@@ -286,7 +286,7 @@ Restaurant_col.metric(
     round(kpi_percent_dict["Restaurant"], 2),
 )
 Taxi_col.metric("Taxi", round(kpi_dict["Taxi"], 2), round(kpi_percent_dict["Taxi"], 2))
-empt_2_col.image("input_data/images/total_living_extra.png", width=100)
+empt_2_col.image("supporting_data/images/total_living_extra.png", width=100)
 
 
 (
@@ -339,20 +339,20 @@ st.divider()
 ) = st.columns(7)
 
 text_5_col.subheader("Savings Categories")
-Ind_savings_col.image("input_data/images/India_savings.png", width=100)
+Ind_savings_col.image("supporting_data/images/India_savings.png", width=100)
 Ind_savings_col.metric(
     "India Savings & Expenses",
     round(kpi_dict["To India"], 2),
     round(kpi_percent_dict["To India"], 2),
 )
-Europe_savings_col.image("input_data/images/Europe_savings.png", width=100)
+Europe_savings_col.image("supporting_data/images/Europe_savings.png", width=100)
 Europe_savings_col.metric(
     "Europe Long term savings",
     round(kpi_dict["Company Pension"], 2),
     round(kpi_percent_dict["Company Pension"], 2),
 )
 
-tot_savings_col.image("input_data/images/savings.png", width=100)
+tot_savings_col.image("supporting_data/images/savings.png", width=100)
 tot_savings_col.metric(
     "Total savings",
     round(kpi_dict["To India"] + kpi_dict["Company Pension"], 2),
