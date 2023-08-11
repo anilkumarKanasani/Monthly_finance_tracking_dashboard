@@ -1,6 +1,8 @@
 ﻿Sub-category;Category;Category Type
+Old Balance Income;Extra Income;Income
 Salary;Salary;Income
 Tax less Income;Extra Income;Income
+Gift Coupon Income;Extra Income;Income
 PDP Income;Extra Income;Income
 Office Travel Income;Extra Income;Income
 Tax;Income Tax;State Cuttings
@@ -8,14 +10,15 @@ Health Insurance;Health Insurance;State Cuttings
 Pension;Pension;State Cuttings
 Unemployment Fund;Charity;State Cuttings
 Nursing Care;Charity;State Cuttings
+Directed to Company Pension;Pension;State Cuttings
 Rent;Living Expenses;Expense
 Phone & WiFi;Living Expenses;Expense
 Groceries;Living Expenses;Expense
 Travel Pass;Living Expenses;Expense
 Gifts;Charity;Expense
+Coupon spendings;Living Expenses;Expense
 Entertainment;Extra Expenses;Expense
 Vacation;Extra Expenses;Expense
-Furnishings;Extra Expenses;Expense
 Family & Kids;Extra Expenses;Expense
 Restaurant;Extra Expenses;Expense
 Taxi;Extra Expenses;Expense
@@ -24,4 +27,4 @@ Gym & Self grooming;Extra Expenses;Expense
 PDP Spending;PDP Expenses;Expense
 Office Travel Spending;PDP Expenses;Expense
 To India;India Savings;Savings
-Company Pension;Europe Savings;Savings
+Company Pension as gift coupon spending;Europe Savings;Savings

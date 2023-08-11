@@ -1,4 +1,4 @@
-def create_dashboard(df):
+def create_dashboard(df, gift_coupon_amount, special_case=False):
     import streamlit as st
     import pandas as pd
 
@@ -9,15 +9,29 @@ def create_dashboard(df):
 
     st.divider()
     # Income Category columns
-    (
-        text_1_col,
-        sal_col,
-        Tax_less_income_col,
-        PDP_income_col,
-        Off_travel_income_col,
-        Total_Income_pdp_col,
-        Total_Income_col,
-    ) = st.columns(7)
+    if special_case:
+        (
+            text_1_col,
+            sal_col,
+            Tax_less_income_col,
+            gift_coupon_col,
+            old_balance_col,
+            PDP_income_col,
+            Off_travel_income_col,
+            Total_Income_pdp_col,
+            Total_Income_col,
+        ) = st.columns(9)
+    else:
+        (
+            text_1_col,
+            sal_col,
+            Tax_less_income_col,
+            gift_coupon_col,
+            PDP_income_col,
+            Off_travel_income_col,
+            Total_Income_pdp_col,
+            Total_Income_col,
+        ) = st.columns(8)
 
     text_1_col.subheader("Income Categories")
     sal_col.image("supporting_data/images/Salary.png", width=100)
@@ -32,6 +46,19 @@ def create_dashboard(df):
         kpi["Tax less Income"],
         kpi_perc["Tax less Income"],
     )
+    gift_coupon_col.image("supporting_data/images/gift_coupon.png", width=100)
+    gift_coupon_col.metric(
+        "Gift Coupons Income",
+        kpi["Gift Coupon Income"],
+        kpi_perc["Gift Coupon Income"],
+    )
+    if special_case:
+        old_balance_col.image("supporting_data/images/old_money.png", width=100)
+        old_balance_col.metric(
+            "Old year balance",
+            kpi["old_balance"],
+            "Excluded from total & percentage calculation",
+        )
 
     PDP_income_col.image("supporting_data/images/PDP_Income.png", width=100)
     PDP_income_col.metric(
@@ -48,7 +75,7 @@ def create_dashboard(df):
 
     Total_Income_pdp_col.image("supporting_data/images/total_income.png", width=100)
     Total_Income_pdp_col.metric(
-        "Total Gross + PDP Income",
+        "Total Gross + PDP + Gift Coupons Income",
         kpi["total_gross_income_pdp"],
     )
     Total_Income_col.image("supporting_data/images/total_income.png", width=100)
@@ -68,8 +95,9 @@ def create_dashboard(df):
         Unemployment_fund_col,
         Nursing_care_col,
         Total_state_cut_col,
+        company_pension_cuttings_col,
         net_income_col,
-    ) = st.columns(8)
+    ) = st.columns(9)
 
     text_2_col.subheader("State Cuttings Categories")
     Income_Tax_col.image("supporting_data/images/Income_tax.png", width=100)
@@ -110,6 +138,13 @@ def create_dashboard(df):
         "Total State Cuttings",
         kpi["total_state_cuttings"],
         kpi_perc["total_state_cuttings"],
+    )
+
+    company_pension_cuttings_col.image("supporting_data/images/pension.png", width=100)
+    company_pension_cuttings_col.metric(
+        "Extra Pension",
+        kpi["Directed to Company Pension"],
+        kpi_perc["Directed to Company Pension"],
     )
 
     net_income_col.image("supporting_data/images/net_income.png", width=100)
@@ -170,7 +205,7 @@ def create_dashboard(df):
     (
         text_4_col,
         Entertainment_col,
-        Furnishings_col,
+        gift_coupons_col,
         Family_Kids_col,
         Restaurant_col,
         Taxi_col,
@@ -183,10 +218,10 @@ def create_dashboard(df):
         kpi["Entertainment"] + kpi["Vacation"],
         kpi_perc["Entertainment"] + kpi_perc["Vacation"],
     )
-    Furnishings_col.metric(
-        "Furnishings",
-        kpi["Furnishings"],
-        kpi_perc["Furnishings"],
+    gift_coupons_col.metric(
+        "Gift Coupon spendings",
+        gift_coupon_amount + kpi["Company Pension as gift coupon spending"],
+        kpi["Company Pension as gift coupon spending"],
     )
     Family_Kids_col.metric(
         "Family & Kids",
@@ -247,8 +282,8 @@ def create_dashboard(df):
         Europe_savings_col,
         empt_col,
         empt_col,
-        empt_col,
         tot_savings_col,
+        reaming_balance_col,
     ) = st.columns(7)
 
     text_5_col.subheader("Savings Categories")
@@ -261,8 +296,10 @@ def create_dashboard(df):
     Europe_savings_col.image("supporting_data/images/Europe_savings.png", width=100)
     Europe_savings_col.metric(
         "Europe Long term savings",
-        kpi["Company Pension"],
-        kpi_perc["Company Pension"],
+        kpi["Company Pension as gift coupon spending"]
+        + kpi["Directed to Company Pension"],
+        kpi_perc["Company Pension as gift coupon spending"]
+        + kpi_perc["Directed to Company Pension"],
     )
 
     tot_savings_col.image("supporting_data/images/savings.png", width=100)
@@ -271,4 +308,7 @@ def create_dashboard(df):
         kpi["total_savings"],
         kpi_perc["total_savings"],
     )
+
+    reaming_balance_col.image("supporting_data/images/balance.png", width=100)
+    reaming_balance_col.metric("Reamining Bank Balance", kpi["reamining_balance"])
     st.divider()
