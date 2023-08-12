@@ -1,4 +1,4 @@
-def create_dashboard(df, gift_coupon_amount, special_case=False):
+def create_dashboard(df, gift_coupon_utilized, gift_coupon_balance, special_case=False):
     import streamlit as st
     import pandas as pd
 
@@ -161,10 +161,11 @@ def create_dashboard(df, gift_coupon_amount, special_case=False):
         Rent_col,
         Phne_wifi_col,
         Groceseries_col,
+        gift_coupons_col,
         Monthly_travel_col,
         Gifts_col,
         Total_living_exp_col,
-    ) = st.columns(7)
+    ) = st.columns(8)
 
     text_3_col.subheader("Living Expenses Categories")
     Rent_col.image("supporting_data/images/rent.png", width=100)
@@ -184,6 +185,12 @@ def create_dashboard(df, gift_coupon_amount, special_case=False):
         "Groceseries",
         kpi["Groceries"],
         kpi_perc["Groceries"],
+    )
+    gift_coupons_col.image("supporting_data/images/gift_coupon.png", width=100)
+    gift_coupons_col.metric(
+        "Gift Coupon spendings",
+        gift_coupon_utilized,
+        "Not coming from Net salary",
     )
     Monthly_travel_col.image("supporting_data/images/Monthly_travel.png", width=100)
     Monthly_travel_col.metric(
@@ -205,7 +212,7 @@ def create_dashboard(df, gift_coupon_amount, special_case=False):
     (
         text_4_col,
         Entertainment_col,
-        gift_coupons_col,
+        vacation_col,
         Family_Kids_col,
         Restaurant_col,
         Taxi_col,
@@ -214,14 +221,14 @@ def create_dashboard(df, gift_coupon_amount, special_case=False):
 
     text_4_col.subheader("Extra Expenses Categories")
     Entertainment_col.metric(
-        "Entertainment & Vacation",
-        kpi["Entertainment"] + kpi["Vacation"],
-        kpi_perc["Entertainment"] + kpi_perc["Vacation"],
+        "Entertainment",
+        kpi["Entertainment"],
+        kpi_perc["Entertainment"],
     )
-    gift_coupons_col.metric(
-        "Gift Coupon spendings",
-        gift_coupon_amount + kpi["Company Pension as gift coupon spending"],
-        kpi["Company Pension as gift coupon spending"],
+    vacation_col.metric(
+        "Vacation",
+        kpi["Vacation"],
+        kpi_perc["Vacation"],
     )
     Family_Kids_col.metric(
         "Family & Kids",
@@ -281,8 +288,8 @@ def create_dashboard(df, gift_coupon_amount, special_case=False):
         Ind_savings_col,
         Europe_savings_col,
         empt_col,
-        empt_col,
         tot_savings_col,
+        gift_coupon_balance_col,
         reaming_balance_col,
     ) = st.columns(7)
 
@@ -308,7 +315,8 @@ def create_dashboard(df, gift_coupon_amount, special_case=False):
         kpi["total_savings"],
         kpi_perc["total_savings"],
     )
-
+    gift_coupon_balance_col.image("supporting_data/images/gift_coupon.png", width=100)
+    gift_coupon_balance_col.metric("Gift Coupon  Balance", gift_coupon_balance)
     reaming_balance_col.image("supporting_data/images/balance.png", width=100)
     reaming_balance_col.metric("Reamining Bank Balance", kpi["reamining_balance"])
     st.divider()

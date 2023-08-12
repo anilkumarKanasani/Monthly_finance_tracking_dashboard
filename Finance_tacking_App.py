@@ -40,7 +40,7 @@ monthly_df = pd.read_csv("processed_data/monthly_detailed_metrics.csv", sep=";")
 
 all_transactions_df = pd.read_csv("processed_data/all_transactions.csv", sep=";")
 coupons_df = pd.read_csv("processed_data/2023/100_coupons.csv", sep=";").set_index(
-    "month"
+    "Unnamed: 0"
 )
 coupons_df = coupons_df.round(2)
 
@@ -48,7 +48,8 @@ with overall_tab:
     st.header("Anil Kumar Kanasani's  2023 Year Income, Savings & Expenses")
     create_dashboard(
         df=yearly_df,
-        gift_coupon_amount=coupons_df.loc["Total"].values[0],
+        gift_coupon_utilized=coupons_df.loc["Total"].values[0],
+        gift_coupon_balance=coupons_df.loc["December"].values[1],
         special_case=True,
     )
 
@@ -75,12 +76,14 @@ for tab, month in zip(
         if month == "January":
             create_dashboard(
                 df=current_month_df,
-                gift_coupon_amount=coupons_df.loc[month].values[0],
+                gift_coupon_utilized=coupons_df.loc[month].values[0],
+                gift_coupon_balance=coupons_df.loc[month].values[1],
                 special_case=True,
             )
         else:
             create_dashboard(
                 df=current_month_df,
-                gift_coupon_amount=coupons_df.loc[month].values[0],
+                gift_coupon_utilized=coupons_df.loc[month].values[0],
+                gift_coupon_balance=coupons_df.loc[month].values[1],
                 special_case=False,
             )
