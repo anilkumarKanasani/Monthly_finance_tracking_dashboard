@@ -16,6 +16,7 @@ tabs_names_list = [
     "October",
     "November",
     "December",
+    "Analysis_requests",
 ]
 st.set_page_config(layout="wide")
 
@@ -33,6 +34,7 @@ st.set_page_config(layout="wide")
     Oct_tab,
     Nov_tab,
     Dec_tab,
+    analysis_tab,
 ) = st.tabs(tabs_names_list)
 
 yearly_df = pd.read_csv("processed_data/yearly_detailed_metrics.csv", sep=";")
@@ -87,3 +89,22 @@ for tab, month in zip(
                 gift_coupon_balance=coupons_df.loc[month].values[1],
                 special_case=False,
             )
+
+with analysis_tab:
+    st.header("Analysis of all year income and spendings")
+    month_selection, category_selection = st.columns(2)
+    with category_selection:
+        selected_category = st.radio(
+            "Selecte a category to analyse",
+            [
+                "total_gross_income",
+                "total_net_income",
+                "tot_living_exp",
+                "tot_extra_exp",
+                "To India",
+            ],
+        )
+
+    df_temp = monthly_df[monthly_df["Sub-category"] == selected_category].copy()
+    st.dataframe(df_temp)
+    st.line_chart(df_temp["amount"])
