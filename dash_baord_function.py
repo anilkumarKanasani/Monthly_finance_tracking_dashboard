@@ -12,28 +12,37 @@ def create_dashboard(df, gift_coupon_utilized, gift_coupon_balance, special_case
     if special_case:
         (
             text_1_col,
+            old_balance_col,
             sal_col,
             Tax_less_income_col,
             gift_coupon_col,
-            old_balance_col,
+            pension_insentive_col,
             PDP_income_col,
             Off_travel_income_col,
             Total_Income_pdp_col,
             Total_Income_col,
-        ) = st.columns(9)
+        ) = st.columns(10)
     else:
         (
             text_1_col,
             sal_col,
             Tax_less_income_col,
             gift_coupon_col,
+            pension_insentive_col,
             PDP_income_col,
             Off_travel_income_col,
             Total_Income_pdp_col,
             Total_Income_col,
-        ) = st.columns(8)
+        ) = st.columns(9)
 
     text_1_col.subheader("Income Categories")
+    if special_case:
+        old_balance_col.image("supporting_data/images/old_money.png", width=100)
+        old_balance_col.metric(
+            "Old year balance",
+            kpi["old_balance"],
+            "Excluded from total & percentage calculation",
+        )
     sal_col.image("supporting_data/images/Salary.png", width=100)
     sal_col.metric(
         "Salary Income",
@@ -52,13 +61,12 @@ def create_dashboard(df, gift_coupon_utilized, gift_coupon_balance, special_case
         kpi["Gift Coupon Income"],
         kpi_perc["Gift Coupon Income"],
     )
-    if special_case:
-        old_balance_col.image("supporting_data/images/old_money.png", width=100)
-        old_balance_col.metric(
-            "Old year balance",
-            kpi["old_balance"],
-            "Excluded from total & percentage calculation",
-        )
+    pension_insentive_col.image("supporting_data/images/pension.png", width=100)
+    pension_insentive_col.metric(
+        "Pension Insentive Income",
+        kpi["Pension Insentive Income"],
+        kpi_perc["Pension Insentive Income"],
+    )
 
     PDP_income_col.image("supporting_data/images/PDP_Income.png", width=100)
     PDP_income_col.metric(
