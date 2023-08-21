@@ -1,14 +1,15 @@
-def refactor_monthly_data_frame(data_frame_location):
-    print("Refactoring ", data_frame_location, " as per project requirement")
+def transform_cc_bill():
     import pandas as pd
-
-    df = pd.read_csv(data_frame_location, sep=";")
-    df["Credit"] = df["Credit"].astype(str).str.replace(",", ".").astype(float)
-    df["Debit"] = df["Debit"].astype(str).str.replace(",", ".").astype(float)
-
-    df = df.fillna(0)
-    df["Date"] = pd.to_datetime(df["Date"], format="%d.%m.%y")
-
-    df.to_csv(data_frame_location, sep=";", index=False)
-    print("Refactoring of ", data_frame_location, " is completed !! ")
+    df = pd.read_csv('~/Downloads/aktivitäten.csv', sep=';')
+    # reverse the order of the rows
+    df = df.iloc[::-1]
+    # replace / with . in Datum column
+    df['Datum'] = df['Datum'].str.replace('/', '.').str.replace('2023', '23')
+    # replace , with . in Betrag column and covert to negative
+    df['Betrag'] = df['Betrag'].str.replace(',', '.').astype(float)* -1
+    df.to_csv('~/Downloads/processed.csv', sep=';')
+    print("Sum of total expeses after Transofrmation :", df['Betrag'].sum())
     return None
+
+if __name__ == "__main__":
+    transform_cc_bill()
