@@ -4,7 +4,7 @@ def transform_cc_bill():
     # reverse the order of the rows
     df = df.iloc[::-1]
     # replace / with . in Datum column
-    df['Datum'] = df['Datum'].str.replace('/', '.').str.replace('2023', '23')
+    df['Datum'] = df['Datum'].str.replace('/', '.').str.replace('2024', '24')
     # extract first word from Beschreibung
     df['Beschreibung'] = df['Beschreibung'].str.split().str[0]
     # replace , with . in Betrag column and covert to negative
