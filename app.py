@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
+import gspread
 from dash_baord_function import create_dashboard
+
+gc = gspread.service_account(filename="./credentials.json")
+wk_sht = gc.open("Expenses_app_db")
 
 tabs_names_list = [
     "Overall_year",
@@ -37,14 +41,20 @@ st.set_page_config(layout="wide")
     analysis_tab,
 ) = st.tabs(tabs_names_list)
 
-yearly_df = pd.read_csv("processed_data/yearly_detailed_metrics.csv", sep=";")
-monthly_df = pd.read_csv("processed_data/monthly_detailed_metrics.csv", sep=";")
 
-all_transactions_df = pd.read_csv("processed_data/all_transactions.csv", sep=";")
-coupons_df = pd.read_csv("processed_data/2024/100_coupons.csv", sep=";").set_index(
-    "Unnamed: 0"
-)
-coupons_df = coupons_df.round(2)
+yearly_df = pd.DataFrame(wk_sht.worksheet("Yearly_detailed_metrics").get_all_records())
+monthly_df = pd.DataFrame(wk_sht.worksheet("Monthly_detailed_metrics").get_all_records())
+coupons_df = pd.DataFrame(wk_sht.worksheet("Coupon_metrics").get_all_records()).round(2)
+
+yearly_df['Sub-category_copy'] = yearly_df['Sub-category']
+yearly_df.set_index('Sub-category_copy', inplace=True)
+
+monthly_df['Sub-category_copy'] = monthly_df['Sub-category']
+monthly_df.set_index('Sub-category_copy', inplace=True)
+
+coupons_df['index_copy'] = coupons_df['index']
+coupons_df.set_index('index_copy', inplace=True)
+
 
 with overall_tab:
     st.header("Anil Kumar Kanasani's  2024 Year Income, Savings & Expenses")

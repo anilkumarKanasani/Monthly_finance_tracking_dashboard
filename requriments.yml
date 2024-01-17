@@ -13,3 +13,5 @@ dependencies:
     - pandas==1.4.2
     - numpy==1.22.4
     - streamlit==1.25.0
+    - gspread==5.12.4
+    - gspread-dataframe==3.3.1
