@@ -60,8 +60,8 @@ with overall_tab:
     st.header("Anil Kumar Kanasani's  2024 Year Income, Savings & Expenses")
     create_dashboard(
         df=yearly_df,
-        gift_coupon_utilized=coupons_df.loc["Total"].values[0],
-        gift_coupon_balance=coupons_df.loc["December"].values[1],
+        gift_coupon_utilized=coupons_df.loc["Total"].values[1],
+        gift_coupon_balance=coupons_df.loc["December"].values[2],
         special_case=True,
     )
 
@@ -88,15 +88,15 @@ for tab, month in zip(
         if month == "January":
             create_dashboard(
                 df=current_month_df,
-                gift_coupon_utilized=coupons_df.loc[month].values[0],
-                gift_coupon_balance=coupons_df.loc[month].values[1],
+                gift_coupon_utilized=coupons_df.loc[month].values[1],
+                gift_coupon_balance=coupons_df.loc[month].values[2],
                 special_case=True,
             )
         else:
             create_dashboard(
                 df=current_month_df,
-                gift_coupon_utilized=coupons_df.loc[month].values[0],
-                gift_coupon_balance=coupons_df.loc[month].values[1],
+                gift_coupon_utilized=coupons_df.loc[month].values[1],
+                gift_coupon_balance=coupons_df.loc[month].values[2],
                 special_case=False,
             )
 
