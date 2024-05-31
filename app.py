@@ -3,7 +3,7 @@ import pandas as pd
 import gspread
 from dash_baord_function import create_dashboard
 
-gc = gspread.service_account(filename="./credentials.json")
+gc = gspread.service_account(filename="./gsheets_credentials.json")
 wk_sht = gc.open("Expenses_app_db")
 
 tabs_names_list = [
@@ -12,7 +12,7 @@ tabs_names_list = [
     "February",
     "March",
     "April",
-    # "May",
+    "May",
     # "June",
     # "July",
     # "August",
@@ -30,7 +30,7 @@ st.set_page_config(layout="wide")
     Feb_tab,
     Mar_tab,
     Apr_tab,
-    # May_tab,
+    May_tab,
     # Jun_tab,
     # Jul_tab,
     # Aug_tab,
@@ -71,7 +71,7 @@ for tab, month in zip(
         Feb_tab,
         Mar_tab,
         Apr_tab,
-        # May_tab,
+        May_tab,
         # Jun_tab,
         # Jul_tab,
         # Aug_tab,

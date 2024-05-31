@@ -164,4 +164,4 @@ cython_debug/
 input_data/
 processed_data/
 .DS_Store
-credentials.json
+gsheets_credentials.json
