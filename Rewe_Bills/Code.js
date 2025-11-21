@@ -54,7 +54,7 @@ function extractInfoByGemini(text) {
 
     // The prompt is your instruction to the model.
     // You can customize it to extract exactly what you need.
-    const prompt = `From the following receipt text, extract the total amount, the date of purchase, and the store name. Return the result as a JSON object with keys  "date", "Store name", "bill amount", "old balance", and "new balance". For example store name can be Rewe, bill amount can be found immediately after SUMME EUR, old balance can be found in ( ) after Geschenkkarte. New balance is after the the brackets. \n\nReceipt Text:\n${text}`;
+    const prompt = `From the following receipt text, extract the total amount, the date of purchase, and the store name. Return the result as a JSON object with keys  "date", "Store name", "bill amount", "old balance", and "new balance". For example store name can be Rewe, bill amount can be found immediately after SUMME EUR, old balance can be found in ( ) after Geschenkkarte. New balance is after the the brackets. If there is no old balance and New balance.. just send 0.00. \n\nReceipt Text:\n${text}`;
 
     const apiKey = PropertiesService.getScriptProperties().getProperty('GeminiApiKey');
     if (!apiKey) {
@@ -164,8 +164,10 @@ function processMails() {
           savedAttachmentCount++;
           const extractedText = extractTextFromAttachment(attachment);
           if (extractedText) {
-            const extractedInfo = extractInfoByGemini(extractedText);
-            Logger.log(`Extracted Info: ${JSON.stringify(extractedInfo)}`);
+            const jsonInfo = extractInfoByGemini(extractedText);
+            const listInfo = [ [jsonInfo["date"], jsonInfo["Store name"], parseFloat(jsonInfo["bill amount"]), parseFloat(jsonInfo["old balance"]), parseFloat(jsonInfo["new balance"])] ];
+            writeDataToSheet(listInfo);
+            Logger.log(`Extracted Info: ${listInfo}`);
           }
         }
       }
@@ -227,19 +229,10 @@ function dailyReweSchedule() {
 
   const teleMessage = `${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
   sendTelegramMessage(teleMessage);
-
-  // Example data for testing writeDataToSheet
-  const newData = [
-    ['2024-06-01', 'Trail4', 45.67, 100.00, 54.33],
-    ['2024-06-02', 'Trail4', 23.45, 54.33, 30.88],
-    ['2024-06-03', 'Trail4', 67.89, 30.88, -36.01],
-  ];
-
-  writeDataToSheet(newData);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
 // It's recommended to run this function via a time-driven trigger
 // rather than calling it in the global scope.
 // To test, you can run `dailyReweSchedule` directly from the Apps Script editor.
-dailyReweSchedule();
+// dailyReweSchedule();
