@@ -5,6 +5,7 @@ const SCRIPT_PROPERTIES = {
 
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
 const EMAIL_SUBJECT_FILTER = "REWE eBon";
+const SPREADSHEET_NAME = "Rewe_Bills_Overview";
 
 /**
  * Gets the current date formatted as YYYY_MM_DD.
@@ -87,26 +88,71 @@ function processMails() {
 }
 
 /**
+ * Writes sample data to a Google Sheet.
+ * It creates a sheet named 'SampleOutput' if it doesn't exist
+ * and writes a sample dataset to it.
+ */
+function writeDataToSheet() {
+  try {
+    const excelName = 'Rewe_bills_overview';
+    const excelFile = DriveApp.getFilesByName(excelName);
+    if (!excelFile.hasNext()) {
+      Logger.log(`Excel file "${excelName}" not found in Drive.`);
+      return;
+    }
+    const file = excelFile.next();
+    const spreadsheet = SpreadsheetApp.openById(file.getId());
+    let sheet = spreadsheet.getSheets()[0];
+
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(sheetName);
+      Logger.log(`Sheet "${sheetName}" was created.`);
+    }
+
+    const sampleData = [
+      ['Date', 'Description', 'Bill amount', 'Old Balance', 'New Balance'],
+      ['2024-06-01', 'REWE Einkauf', 45.67, 100.00, 54.33],
+      ['2024-06-02', 'REWE Einkauf', 23.45, 54.33, 30.88],
+      ['2024-06-03', 'REWE Einkauf', 67.89, 30.88, -36.01],
+    ];
+
+    // Clear existing data and write new data
+    sheet.clear();
+    const range = sheet.getRange(1, 1, sampleData.length, sampleData[0].length);
+    range.setValues(sampleData);
+
+    Logger.log(`Successfully wrote ${sampleData.length} rows".`);
+  } catch (e) {
+    Logger.log(`Error in writeDataToSheet: ${e.message}`);
+  }
+}
+
+
+/**
  * Main function to be scheduled daily.
  * It processes emails and sends a summary report to Telegram.
  */
 function dailyReweSchedule() {
-  const currentDate = getCurrentDate();
-  Logger.log(`Processing for: ${currentDate}`);
+  // const currentDate = getCurrentDate();
+  // Logger.log(`Processing for: ${currentDate}`);
 
-  const {
-    newEmailCount,
-    oldEmailCount,
-    savedAttachmentCount
-  } = processMails();
+  // const {
+  //   newEmailCount,
+  //   oldEmailCount,
+  //   savedAttachmentCount
+  // } = processMails();
 
-  const teleMessage = `${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
-  sendTelegramMessage(teleMessage);
+  // const teleMessage = `${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
+  // sendTelegramMessage(teleMessage);
 
-  Logger.log(`Completed: ${teleMessage}`);
+  writeDataToSheet();
+  Logger.log(`Completed`);
+  // Logger.log(`Completed: ${teleMessage}`);
 }
+
+
 
 // It's recommended to run this function via a time-driven trigger
 // rather than calling it in the global scope.
 // To test, you can run `dailyReweSchedule` directly from the Apps Script editor.
-// dailyReweSchedule();
+dailyReweSchedule();
