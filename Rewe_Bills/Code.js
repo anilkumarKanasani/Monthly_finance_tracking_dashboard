@@ -5,7 +5,7 @@ const SCRIPT_PROPERTIES = {
 
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
 const EMAIL_SUBJECT_FILTER = "REWE eBon";
-const SPREADSHEET_NAME = "Rewe_Bills_Overview";
+const EXCEL_NAME = "Rewe_Bills_Overview";
 
 /**
  * Gets the current date formatted as YYYY_MM_DD.
@@ -89,39 +89,31 @@ function processMails() {
 
 /**
  * Writes sample data to a Google Sheet.
- * It creates a sheet named 'SampleOutput' if it doesn't exist
- * and writes a sample dataset to it.
+ * @param {Array<Array>} newData The new data to write to the sheet.
  */
-function writeDataToSheet() {
+function writeDataToSheet(newData) {
   try {
-    const excelName = 'Rewe_bills_overview';
-    const excelFile = DriveApp.getFilesByName(excelName);
+    const excelFile = DriveApp.getFilesByName(EXCEL_NAME);
     if (!excelFile.hasNext()) {
-      Logger.log(`Excel file "${excelName}" not found in Drive.`);
+      Logger.log(`Excel file "${EXCEL_NAME}" not found in Drive.`);
       return;
     }
+
     const file = excelFile.next();
     const spreadsheet = SpreadsheetApp.openById(file.getId());
     let sheet = spreadsheet.getSheets()[0];
 
     if (!sheet) {
-      sheet = spreadsheet.insertSheet(sheetName);
-      Logger.log(`Sheet "${sheetName}" was created.`);
+      Logger.log(`No sheets found in the excel "${EXCEL_NAME}".`);
     }
 
-    const sampleData = [
-      ['Date', 'Description', 'Bill amount', 'Old Balance', 'New Balance'],
-      ['2024-06-01', 'REWE Einkauf', 45.67, 100.00, 54.33],
-      ['2024-06-02', 'REWE Einkauf', 23.45, 54.33, 30.88],
-      ['2024-06-03', 'REWE Einkauf', 67.89, 30.88, -36.01],
-    ];
+    // Append new data to existing data
+    const existingData = sheet.getDataRange().getValues();
+    const AllData = existingData.concat(newData);
+    sheet.clearContents();
+    sheet.getRange(1, 1, AllData.length, AllData[0].length).setValues(AllData); // This might fail if AllData is empty
 
-    // Clear existing data and write new data
-    sheet.clear();
-    const range = sheet.getRange(1, 1, sampleData.length, sampleData[0].length);
-    range.setValues(sampleData);
-
-    Logger.log(`Successfully wrote ${sampleData.length} rows".`);
+    Logger.log(`Successfully wrote ${newData.length} rows".`);
   } catch (e) {
     Logger.log(`Error in writeDataToSheet: ${e.message}`);
   }
@@ -145,12 +137,16 @@ function dailyReweSchedule() {
   // const teleMessage = `${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
   // sendTelegramMessage(teleMessage);
 
-  writeDataToSheet();
-  Logger.log(`Completed`);
+  // Example data for testing writeDataToSheet
+  const newData = [
+    ['2024-06-01', 'Trail3', 45.67, 100.00, 54.33],
+    ['2024-06-02', 'Trail3', 23.45, 54.33, 30.88],
+    ['2024-06-03', 'Trail3', 67.89, 30.88, -36.01],
+  ];
+
+  writeDataToSheet(newData);
   // Logger.log(`Completed: ${teleMessage}`);
 }
-
-
 
 // It's recommended to run this function via a time-driven trigger
 // rather than calling it in the global scope.
