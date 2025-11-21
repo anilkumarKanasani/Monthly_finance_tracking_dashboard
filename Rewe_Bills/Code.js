@@ -48,6 +48,52 @@ function sendTelegramMessage(message) {
 }
 
 
+function extractInfoByGemini(text) {
+  try {
+    Logger.log('Extracting info using Gemini API.');
+
+    // The prompt is your instruction to the model.
+    // You can customize it to extract exactly what you need.
+    const prompt = `From the following receipt text, extract the total amount, the date of purchase, and the store name. Return the result as a JSON object with keys  "date", "Store name", "bill amount", "old balance", and "new balance". For example store name can be Rewe, bill amount can be found immediately after SUMME EUR, old balance can be found in ( ) after Geschenkkarte. New balance is after the the brackets. \n\nReceipt Text:\n${text}`;
+
+    const apiKey = PropertiesService.getScriptProperties().getProperty('GeminiApiKey');
+    if (!apiKey) {
+      Logger.log('Gemini API key is not set in script properties.');
+      return null;
+    }
+
+    // This is the endpoint for the Gemini 1.0 Pro model.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const payload = {
+      "contents": [{
+        "parts": [{
+          "text": prompt
+        }]
+      }]
+    };
+
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+
+    Logger.log('Info extracted successfully from Gemini API.');
+    // The response from Gemini is inside a nested structure.
+    // We'll extract the text and parse it if it's a JSON string.
+    const extractedText = result.candidates[0].content.parts[0].text;
+    // The model might return the JSON inside a markdown code block, so we clean it.
+    return JSON.parse(extractedText.replace(/```json\n|```/g, ''));
+  } catch (e) {
+    Logger.log(`Error during Gemini API extraction: ${e.message}`);
+    return null;
+  }
+}
+
 /**
  * Extracts visible text from an attachment using Google Drive's built-in OCR.
  * This works for PDFs and image files.
@@ -115,8 +161,12 @@ function processMails() {
           const originalName = attachment.getName();
           const newFileName = `${currentDate}_${index + 1}_${originalName}`;
           billsFolder.createFile(attachment.copyBlob().setName(newFileName));
-          extractTextFromAttachment(attachment);
           savedAttachmentCount++;
+          const extractedText = extractTextFromAttachment(attachment);
+          if (extractedText) {
+            const extractedInfo = extractInfoByGemini(extractedText);
+            Logger.log(`Extracted Info: ${JSON.stringify(extractedInfo)}`);
+          }
         }
       }
     }
