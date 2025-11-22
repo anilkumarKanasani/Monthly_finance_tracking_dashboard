@@ -76,7 +76,7 @@ function extractInfoByGemini(text) {
     }
 
     // This is the endpoint for the Gemini 1.0 Pro model.
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const payload = {
       contents: [
@@ -246,41 +246,41 @@ function processManaulFolder() {
   const folders = DriveApp.getFoldersByName(MANUAL_BILLS_DRIVE_FOLDER_NAME);
   const billsFolder = folders.hasNext()
     ? folders.next()
-    : DriveApp.createFolder(DRIVE_FOLDER_NAME);
+    : DriveApp.createFolder(MANUAL_BILLS_DRIVE_FOLDER_NAME);
   
   // Read all the fpdf iles in the billsFOlder location
   const files = billsFolder.getFilesByType("application/pdf");
-  for (const file of files) {
+  // The 'for...of' loop requires an iterator, but getFilesByType returns a FileIterator.
+  // We need to use a 'while' loop with hasNext() and next().
+  while (files.hasNext()) {
+    const file = files.next();
     if (file.isStarred()) {
       oldFileCount++;
     } else {
-      file.star();
+      file.setStarred(true);
       staredFileCount++;
-      const extractedText = extractTextFromAttachment(file);
+      // The 'extractTextFromAttachment' function expects a GmailAttachment, but here we have a Drive File.
+      // We need to get its blob to pass it.
+      const extractedText = extractTextFromAttachment(file.getBlob());
       if (extractedText) {
         const jsonInfo = extractInfoByGemini(extractedText);
-        const listInfo = [
-              [
-                jsonInfo["date"],
-                jsonInfo["Store name"],
-                parseFloat(jsonInfo["bill amount"]),
-                parseFloat(jsonInfo["old balance"]),
-                parseFloat(jsonInfo["new balance"]),
-              ],
-            ];
-            writeDataToSheet(listInfo);
-            Logger.log(`Extracted Info: ${listInfo}`);
-          }
-        }
+        const listInfo = [[
+          jsonInfo["date"],
+          jsonInfo["Store name"],
+          parseFloat(jsonInfo["bill amount"]),
+          parseFloat(jsonInfo["old balance"]),
+          parseFloat(jsonInfo["new balance"]),
+        ]];
+        writeDataToSheet(listInfo);
+        Logger.log(`Extracted Info: ${listInfo}`);
       }
     }
-  return {
-    staredFileCount,
-    oldFileCount,
-  };
+  }
+  return { staredFileCount, oldFileCount };
+}
 
 
-  /**
+/**
  * Main function to be scheduled daily.
  * It processes emails and sends a summary report to Telegram.
  */
@@ -309,4 +309,4 @@ function dailyManualBillsSchedule() {
 // rather than calling it in the global scope.
 // To test, you can run `dailyReweSchedule` directly from the Apps Script editor.
 // dailyReweSchedule();
-dailyManualBillsSchedule();
+// dailyManualBillsSchedule();
