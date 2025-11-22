@@ -4,9 +4,25 @@ const SCRIPT_PROPERTIES = {
 };
 
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
+const MANUAL_BILLS_DRIVE_FOLDER_NAME = "Manual_bills";
 const EMAIL_SUBJECT_FILTER = "REWE eBon"; // Using a constant for this is a good practice
 const EXCEL_NAME = "Rewe_Bills_Overview";
 
+
+function get_rewe_bills_prompt(text){
+return  `From the following receipt text, extract the information and return it as a JSON object.
+
+                The JSON object must have these keys: "date", "Store name", "bill amount", "old balance", and "new balance".
+
+                - "Store name" can be something like Rewe, Netto, Kaufland, Lidil, SSB, DB or something similar.
+                - "bill amount" is found after "SUMME EUR" or something in bigger fonts.
+                - "old balance" is the value in parentheses "()" after "Geschenkkarte".
+                - "new balance" is the value immediately after the parentheses for the old balance.
+                - If "old balance" or "new balance" are not present, use "0.00" for their values.
+
+                Receipt Text:
+                ${text}`;
+}
 /**
  * Gets the current date formatted as YYYY_MM_DD.
  * @returns {string} The formatted date string.
@@ -50,21 +66,7 @@ function sendTelegramMessage(message) {
 function extractInfoByGemini(text) {
   try {
     Logger.log("Extracting info using Gemini API.");
-
-    // The prompt is your instruction to the model.
-    // You can customize it to extract exactly what you need.
-    const prompt = `From the following receipt text, extract the information and return it as a JSON object.
-
-                    The JSON object must have these keys: "date", "Store name", "bill amount", "old balance", and "new balance".
-
-                    - "Store name" can be something like Rewe, Netto, Kaufland, Lidil, SSB, DB or something similar.
-                    - "bill amount" is found after "SUMME EUR" or something in bigger fonts.
-                    - "old balance" is the value in parentheses "()" after "Geschenkkarte".
-                    - "new balance" is the value immediately after the parentheses for the old balance.
-                    - If "old balance" or "new balance" are not present, use "0.00" for their values.
-
-                    Receipt Text:
-                    ${text}`;
+    const prompt = get_rewe_bills_prompt(text);
 
     const apiKey =
       PropertiesService.getScriptProperties().getProperty("GeminiApiKey");
@@ -237,18 +239,68 @@ function writeDataToSheet(newData) {
   }
 }
 
-/**
+
+function processManaulFolder() {
+  let oldFileCount = 0;
+  let staredFileCount = 0;
+  const folders = DriveApp.getFoldersByName(MANUAL_BILLS_DRIVE_FOLDER_NAME);
+  const billsFolder = folders.hasNext()
+    ? folders.next()
+    : DriveApp.createFolder(DRIVE_FOLDER_NAME);
+  
+  // Read all the fpdf iles in the billsFOlder location
+  const files = billsFolder.getFilesByType("application/pdf");
+  for (const file of files) {
+    if (file.isStarred()) {
+      oldFileCount++;
+    } else {
+      file.star();
+      staredFileCount++;
+      const extractedText = extractTextFromAttachment(file);
+      if (extractedText) {
+        const jsonInfo = extractInfoByGemini(extractedText);
+        const listInfo = [
+              [
+                jsonInfo["date"],
+                jsonInfo["Store name"],
+                parseFloat(jsonInfo["bill amount"]),
+                parseFloat(jsonInfo["old balance"]),
+                parseFloat(jsonInfo["new balance"]),
+              ],
+            ];
+            writeDataToSheet(listInfo);
+            Logger.log(`Extracted Info: ${listInfo}`);
+          }
+        }
+      }
+    }
+  return {
+    staredFileCount,
+    oldFileCount,
+  };
+
+
+  /**
  * Main function to be scheduled daily.
  * It processes emails and sends a summary report to Telegram.
  */
 function dailyReweSchedule() {
   const currentDate = getCurrentDate();
-  Logger.log(`Processing for: ${currentDate}`);
+  Logger.log(`Email bills Processing for: ${currentDate}`);
 
   const { newEmailCount, oldEmailCount, savedAttachmentCount } =
     processMails();
 
-  const teleMessage = `${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
+  const teleMessage = `$Email bills Processing report for:${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
+  sendTelegramMessage(teleMessage);
+  Logger.log(`Completed: ${teleMessage}`);
+}
+
+function dailyManualBillsSchedule() {
+  const currentDate = getCurrentDate();
+  Logger.log(`Manual Bills Processing for: ${currentDate}`);
+  const { staredFileCount, oldFileCount } = processManaulFolder();
+  const teleMessage = `Manual Bills Processing report for:${currentDate}: stared: ${staredFileCount} old: ${oldFileCount}`;
   sendTelegramMessage(teleMessage);
   Logger.log(`Completed: ${teleMessage}`);
 }
@@ -257,3 +309,4 @@ function dailyReweSchedule() {
 // rather than calling it in the global scope.
 // To test, you can run `dailyReweSchedule` directly from the Apps Script editor.
 // dailyReweSchedule();
+dailyManualBillsSchedule();
