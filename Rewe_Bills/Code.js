@@ -104,7 +104,16 @@ function extractInfoByGemini(text) {
     // We'll extract the text and parse it if it's a JSON string.
     const extractedText = result.candidates[0].content.parts[0].text;
     // The model might return the JSON inside a markdown code block, so we clean it.
-    return JSON.parse(extractedText.replace(/```json\n|```/g, ""));
+    const jsonInfo = JSON.parse(extractedText.replace(/```json\n|```/g, ""));
+    const listInfo = [[
+          jsonInfo["date"],
+          jsonInfo["Store name"],
+          parseFloat(jsonInfo["bill amount"]),
+          parseFloat(jsonInfo["old balance"]),
+          parseFloat(jsonInfo["new balance"]),
+          "Not Yet"
+        ]];
+    return listInfo;
   } catch (e) {
     Logger.log(`Error during Gemini API extraction: ${e.message}`);
     return null;
@@ -183,16 +192,7 @@ function processMails() {
           savedAttachmentCount++;
           const extractedText = extractTextFromAttachment(attachment);
           if (extractedText) {
-            const jsonInfo = extractInfoByGemini(extractedText);
-            const listInfo = [
-              [
-                jsonInfo["date"],
-                jsonInfo["Store name"],
-                parseFloat(jsonInfo["bill amount"]),
-                parseFloat(jsonInfo["old balance"]),
-                parseFloat(jsonInfo["new balance"]),
-              ],
-            ];
+            const listInfo = extractInfoByGemini(extractedText);
             writeDataToSheet(listInfo);
             Logger.log(`Extracted Info: ${listInfo}`);
           }
@@ -264,13 +264,6 @@ function processManaulFolder() {
       const extractedText = extractTextFromAttachment(file.getBlob());
       if (extractedText) {
         const jsonInfo = extractInfoByGemini(extractedText);
-        const listInfo = [[
-          jsonInfo["date"],
-          jsonInfo["Store name"],
-          parseFloat(jsonInfo["bill amount"]),
-          parseFloat(jsonInfo["old balance"]),
-          parseFloat(jsonInfo["new balance"]),
-        ]];
         writeDataToSheet(listInfo);
         Logger.log(`Extracted Info: ${listInfo}`);
       }
@@ -291,22 +284,28 @@ function dailyReweSchedule() {
   const { newEmailCount, oldEmailCount, savedAttachmentCount } =
     processMails();
 
-  const teleMessage = `$Email bills Processing report for:${currentDate}: new: ${newEmailCount} old: ${oldEmailCount} saved: ${savedAttachmentCount}`;
+  const teleMessage = `Email bills Processing report for:${currentDate}: New Emails Count : ${newEmailCount} Already in Emails Count: ${oldEmailCount} Uploaded Files Count : ${savedAttachmentCount}`;
   sendTelegramMessage(teleMessage);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
+/**
+ * Main function to be scheduled daily.
+ * It processes manual bills and sends a summary report to Telegram.
+ */
 function dailyManualBillsSchedule() {
   const currentDate = getCurrentDate();
   Logger.log(`Manual Bills Processing for: ${currentDate}`);
   const { staredFileCount, oldFileCount } = processManaulFolder();
-  const teleMessage = `Manual Bills Processing report for:${currentDate}: stared: ${staredFileCount} old: ${oldFileCount}`;
+  const teleMessage = `Manual Bills Processing report for:${currentDate}: Uploaded Files Count : ${staredFileCount} Already in Drive Count: ${oldFileCount}`;
   sendTelegramMessage(teleMessage);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
-// It's recommended to run this function via a time-driven trigger
-// rather than calling it in the global scope.
-// To test, you can run `dailyReweSchedule` directly from the Apps Script editor.
-// dailyReweSchedule();
-// dailyManualBillsSchedule();
+/**
+ * Function to trigger Daily
+ */
+function dailyTrigger(){
+  dailyReweSchedule();
+  dailyManualBillsSchedule();
+}
