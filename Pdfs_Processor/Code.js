@@ -6,7 +6,11 @@ const SCRIPT_PROPERTIES = {
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
 const MANUAL_BILLS_DRIVE_FOLDER_NAME = "Manual_bills";
 const EMAIL_SUBJECT_FILTER = "REWE eBon"; // Using a constant for this is a good practice
-const EXCEL_NAME = "Rewe_Bills_Overview";
+const REWE_BILLS_EXCEL_NAME = "Rewe_Bills_Overview";
+
+
+const PAYSLIPS_DRIVE_FOLDER_NAME = "2026";
+const PAYSLIPS_EXCEL_NAME = "2026_at_a_glance";
 
 
 function get_rewe_bills_prompt(text){
@@ -21,6 +25,43 @@ return  `From the following receipt text, extract the information and return it 
                 - If "old balance" or "new balance" are not present, use "0.00" for their values.
 
                 Receipt Text:
+                ${text}`;
+}
+
+function get_payslips_prompt(text){
+return  `From the following Payslips text, extract the information and return it as a JSON object.
+
+                The JSON object must have these keys: "date", "Description", "Income", "Expenses", "Category".
+
+                - "Date" can be the end date of the payslips month. For example, if payslip is "für Oktober 2025" date will be "31-10-2025".
+                - "Description" can be if 
+                    - "Gehalt" then "Base Salary", 
+                    - "Betriebl.AV,AG,lfd,§3Nr.63EStG" then "Pesnion Income",
+                    - "Sachbezug/Goodies" then "Goodies"
+                    - "Essenszuschuss" or "Fahrtkosten" then "Become 1"
+                    - "Steuerrechtliche Abzüge" then "Income Tax"
+                    - "KV-Beitrag" then "Health Insurance"
+                    - "RV-Beitrag" then "Pension"
+                    - "AV-Beitrag" then "Employe Insurance"
+                    - "PV-Beitrag" then "Nursing Care"
+                    - "Gehaltsverzicht bAV" then "Alliance_Pension"
+                - "Income" is found in corresponding Betrag column.
+                    - "Income" should be only for "Base Salary", "Pension Income", "Goodies", "Become 1"
+                    - For remaining "Income is 0.00"
+                - "Expenses" is foung just below the Description
+                    - "Expenses" should be only for "Income Tax", "Health Insurance", "Pension", "Employe Insurance", "Nursing Care", "Alliance_Pension"
+                    - For remaining "Expenses is 0.00"
+                - "Category" should be one of the ["Base_Income", "Alliance_Pension", "Extra_Income", "Tax", "Insurance",  "State_Pension", "Employe_Insurance", "Care_insurance"]
+                    - "Base Salary" then "Base_Income"
+                    - "Pesnion Income" or "Alliance_Pension" then "Alliance_Pension"
+                    - "Goodies" then "Extra_Income"
+                    - "Become 1" then "Extra_Income"
+                    - "Income Tax" then "Tax"
+                    - "Health Insurance" then "Insurance"
+                    - "Pension" then "State_Pension"
+                    - "Employe Insurance" then "Employe_Insurance"
+                    - "Nursing Care" then "Care_insurance"
+                Payslip Text:
                 ${text}`;
 }
 /**
@@ -63,10 +104,16 @@ function sendTelegramMessage(message) {
   UrlFetchApp.fetch(url, options);
 }
 
-function extractInfoByGemini(text) {
+function extractInfoByGemini(text, prompt_template = "") {
   try {
     Logger.log("Extracting info using Gemini API.");
-    const prompt = get_rewe_bills_prompt(text);
+    
+    if (prompt_template == "get_rewe_bills_prompt"){
+      prompt = get_rewe_bills_prompt(text);
+    }
+    else if (prompt_template == "get_payslips_prompt"){
+      prompt = get_payslips_prompt(text);
+    }
 
     const apiKey =
       PropertiesService.getScriptProperties().getProperty("GeminiApiKey");
@@ -105,15 +152,30 @@ function extractInfoByGemini(text) {
     const extractedText = result.candidates[0].content.parts[0].text;
     // The model might return the JSON inside a markdown code block, so we clean it.
     const jsonInfo = JSON.parse(extractedText.replace(/```json\n|```/g, ""));
-    const listInfo = [[
-          jsonInfo["date"],
-          jsonInfo["Store name"],
-          parseFloat(jsonInfo["bill amount"]),
-          parseFloat(jsonInfo["old balance"]),
-          parseFloat(jsonInfo["new balance"]),
-          "Not Yet"
-        ]];
-    return listInfo;
+    if (prompt_template == "get_rewe_bills_prompt"){
+      const listInfo = [[
+            jsonInfo["date"],
+            jsonInfo["Store name"],
+            parseFloat(jsonInfo["bill amount"]),
+            parseFloat(jsonInfo["old balance"]),
+            parseFloat(jsonInfo["new balance"]),
+            "Not Yet"
+          ]];
+      return listInfo;
+        }
+    else if (prompt_template == "get_payslips_prompt"){
+      const listInfo = jsonInfo.map(item => [
+        item.date,
+        item.Description,
+        parseFloat(item.Income),
+        parseFloat(item.Expenses),
+        item.Category
+      ]);
+      return listInfo;
+    }
+    else {
+    return null;
+    }
   } catch (e) {
     Logger.log(`Error during Gemini API extraction: ${e.message}`);
     return null;
@@ -159,6 +221,40 @@ function extractTextFromAttachment(attachment) {
   }
 }
 
+
+/**
+ * Writes sample data to a Google Sheet.
+ * @param {Array<Array>} newData The new data to write to the sheet.
+ */
+function AppendDataToSheet(newData, EXCEL_NAME = "") {
+  try {
+    const excelFile = DriveApp.getFilesByName(EXCEL_NAME);
+    if (!excelFile.hasNext()) {
+      Logger.log(`Excel file "${EXCEL_NAME}" not found in Drive.`);
+      return;
+    }
+
+    const file = excelFile.next();
+    const spreadsheet = SpreadsheetApp.openById(file.getId());
+    let sheet = spreadsheet.getSheets()[0];
+
+    if (!sheet) {
+      Logger.log(`No sheets found in the spreadsheet "${EXCEL_NAME}".`);
+    }
+
+    // Append new data to existing data
+    const existingData = sheet.getDataRange().getValues();
+    const AllData = existingData.concat(newData);
+    sheet.clearContents(); // This is inefficient for large sheets. Consider appending.
+    sheet.getRange(1, 1, AllData.length, AllData[0].length).setValues(AllData); // This might fail if AllData is empty
+
+    Logger.log(`Successfully wrote ${newData.length} rows".`);
+  } catch (e) {
+    Logger.log(`Error in AppendDataToSheet: ${e.message}`);
+  }
+}
+
+
 /**
  * Processes REWE emails, stars them, and saves attachments to Google Drive.
  * @returns {{newEmailCount: number, oldEmailCount: number, savedAttachmentCount: number}} An object with counts of processed emails and attachments.
@@ -192,8 +288,8 @@ function processMails() {
           savedAttachmentCount++;
           const extractedText = extractTextFromAttachment(attachment);
           if (extractedText) {
-            const listInfo = extractInfoByGemini(extractedText);
-            writeDataToSheet(listInfo);
+            const listInfo = extractInfoByGemini(extractedText, "get_rewe_bills_prompt");
+            AppendDataToSheet(listInfo, REWE_BILLS_EXCEL_NAME);
             Logger.log(`Extracted Info: ${listInfo}`);
           }
         }
@@ -207,46 +303,13 @@ function processMails() {
   };
 }
 
-/**
- * Writes sample data to a Google Sheet.
- * @param {Array<Array>} newData The new data to write to the sheet.
- */
-function writeDataToSheet(newData) {
-  try {
-    const excelFile = DriveApp.getFilesByName(EXCEL_NAME);
-    if (!excelFile.hasNext()) {
-      Logger.log(`Excel file "${EXCEL_NAME}" not found in Drive.`);
-      return;
-    }
-
-    const file = excelFile.next();
-    const spreadsheet = SpreadsheetApp.openById(file.getId());
-    let sheet = spreadsheet.getSheets()[0];
-
-    if (!sheet) {
-      Logger.log(`No sheets found in the spreadsheet "${EXCEL_NAME}".`);
-    }
-
-    // Append new data to existing data
-    const existingData = sheet.getDataRange().getValues();
-    const AllData = existingData.concat(newData);
-    sheet.clearContents(); // This is inefficient for large sheets. Consider appending.
-    sheet.getRange(1, 1, AllData.length, AllData[0].length).setValues(AllData); // This might fail if AllData is empty
-
-    Logger.log(`Successfully wrote ${newData.length} rows".`);
-  } catch (e) {
-    Logger.log(`Error in writeDataToSheet: ${e.message}`);
-  }
-}
-
-
-function processManaulFolder() {
+function processDocsInAFolder(DRIVE_FOLDER_NAME) {
   let oldFileCount = 0;
   let staredFileCount = 0;
-  const folders = DriveApp.getFoldersByName(MANUAL_BILLS_DRIVE_FOLDER_NAME);
+  const folders = DriveApp.getFoldersByName(DRIVE_FOLDER_NAME);
   const billsFolder = folders.hasNext()
     ? folders.next()
-    : DriveApp.createFolder(MANUAL_BILLS_DRIVE_FOLDER_NAME);
+    : DriveApp.createFolder(DRIVE_FOLDER_NAME);
   
   // Read all the fpdf iles in the billsFOlder location
   const files = billsFolder.getFilesByType("application/pdf");
@@ -263,12 +326,23 @@ function processManaulFolder() {
       // We need to get its blob to pass it.
       const extractedText = extractTextFromAttachment(file.getBlob());
       if (extractedText) {
-        const jsonInfo = extractInfoByGemini(extractedText);
-        writeDataToSheet(listInfo);
+        if (DRIVE_FOLDER_NAME == MANUAL_BILLS_DRIVE_FOLDER_NAME){
+          prompt = "get_rewe_bills_prompt"
+          excel_name = REWE_BILLS_EXCEL_NAME
+        }
+        else if (DRIVE_FOLDER_NAME == PAYSLIPS_DRIVE_FOLDER_NAME){
+
+          prompt = "get_payslips_prompt"
+          excel_name = PAYSLIPS_EXCEL_NAME
+        }
+        
+        const listInfo = extractInfoByGemini(extractedText, prompt);
+        AppendDataToSheet(listInfo, excel_name );
         Logger.log(`Extracted Info: ${listInfo}`);
+        }
+
       }
     }
-  }
   return { staredFileCount, oldFileCount };
 }
 
@@ -296,11 +370,30 @@ function dailyReweSchedule() {
 function dailyManualBillsSchedule() {
   const currentDate = getCurrentDate();
   Logger.log(`Manual Bills Processing for: ${currentDate}`);
-  const { staredFileCount, oldFileCount } = processManaulFolder();
-  const teleMessage = `Manual Bills Processing report for:${currentDate}: Uploaded Files Count : ${staredFileCount} Already in Drive Count: ${oldFileCount}`;
+  const { staredFileCount, oldFileCount } = processDocsInAFolder(MANUAL_BILLS_DRIVE_FOLDER_NAME);
+  const teleMessage = `Manual Bills Processing report for:${currentDate}: \n
+                        Uploaded Files Count : ${staredFileCount} \n
+                        Already in Drive Count: ${oldFileCount}`;
   sendTelegramMessage(teleMessage);
   Logger.log(`Completed: ${teleMessage}`);
 }
+
+
+/**
+ * Main function to be scheduled monthly.
+ * It processes payslips and sends a summary report to Telegram.
+ */
+function monthlyPayslipsSchedule() {
+  const currentDate = getCurrentDate();
+  Logger.log(`Payslips Processing for: ${currentDate}`);
+  const { staredFileCount, oldFileCount } = processDocsInAFolder(PAYSLIPS_DRIVE_FOLDER_NAME);
+  const teleMessage = `Monthly Payslips Processing report for:${currentDate}: \n
+                       Uploaded Files Count : ${staredFileCount} \n
+                       Already in Drive Count: ${oldFileCount}`;
+  sendTelegramMessage(teleMessage);
+  Logger.log(`Completed: ${teleMessage}`);
+}
+
 
 /**
  * Function to trigger Daily
@@ -308,4 +401,12 @@ function dailyManualBillsSchedule() {
 function dailyTrigger(){
   dailyReweSchedule();
   dailyManualBillsSchedule();
+}
+
+
+/**
+ * Function to trigger Monthly
+ */
+function monthlyTrigger(){
+  monthlyPayslipsSchedule();
 }
