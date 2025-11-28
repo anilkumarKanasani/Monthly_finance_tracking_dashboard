@@ -1,13 +1,22 @@
 const SCRIPT_PROPERTIES = {
-  TELEGRAM_TOKEN: "TelegramToken",
-  CHAT_ID: "ChatID",
+  DevTelegramToken: "TelegramToken",
+  SchoolTelegramToken: "SchoolTelegramToken",
+  GeminiApiKey: "GeminiApiKey",
+  ChatID: "ChatID",
 };
+
+const scriptProperties = PropertiesService.getScriptProperties();
+const dev_token = scriptProperties.getProperty(SCRIPT_PROPERTIES.DevTelegramToken);
+const school_token = scriptProperties.getProperty(SCRIPT_PROPERTIES.SchoolTelegramToken);
+const chatId = scriptProperties.getProperty(SCRIPT_PROPERTIES.ChatID);
+const apiKey = scriptProperties.getProperty(SCRIPT_PROPERTIES.GeminiApiKey);
 
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
 const MANUAL_BILLS_DRIVE_FOLDER_NAME = "Manual_bills";
-const EMAIL_SUBJECT_FILTER = "REWE eBon"; // Using a constant for this is a good practice
+const REWE_BILLS_FROM_EMAIL = "ebon@mailing.rewe.de"; // Using a constant for this is a good practice
 const REWE_BILLS_EXCEL_NAME = "Rewe_Bills_Overview";
 
+const SCHOOL_FROM_EMAIL = "franklinschule";
 
 const PAYSLIPS_DRIVE_FOLDER_NAME = "2026";
 const PAYSLIPS_EXCEL_NAME = "2026_at_a_glance";
@@ -22,7 +31,7 @@ return  `From the following receipt text, extract the information and return it 
                 - "bill amount" is found after "SUMME EUR" or something in bigger fonts.
                 - "old balance" is the value in parentheses "()" after "Geschenkkarte".
                 - "new balance" is the value immediately after the parentheses for the old balance.
-                - If "old balance" or "new balance" are not present, use "0.00" for their values.
+                - If "old balance" or "new balance" are not present, use "100000.00" for their values.
 
                 Receipt Text:
                 ${text}`;
@@ -64,6 +73,14 @@ return  `From the following Payslips text, extract the information and return it
                 Payslip Text:
                 ${text}`;
 }
+
+function get_school_translate_prompt(text){
+  return  `Translate the following German text to English and summarize the key points in bullet format.
+
+                  German Text:
+                  ${text}`;
+  }
+
 /**
  * Gets the current date formatted as YYYY_MM_DD.
  * @returns {string} The formatted date string.
@@ -80,11 +97,7 @@ function getCurrentDate() {
  * Sends a message to a Telegram chat.
  * @param {string} message The text message to send.
  */
-function sendTelegramMessage(message) {
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const token = scriptProperties.getProperty(SCRIPT_PROPERTIES.TELEGRAM_TOKEN);
-  const chatId = scriptProperties.getProperty(SCRIPT_PROPERTIES.CHAT_ID);
-
+function sendTelegramMessage(message, token, chatId) {
   if (!token || !chatId) {
     Logger.log("Telegram token or chat ID is not set in script properties.");
     return;
@@ -114,9 +127,9 @@ function extractInfoByGemini(text, prompt_template = "") {
     else if (prompt_template == "get_payslips_prompt"){
       prompt = get_payslips_prompt(text);
     }
-
-    const apiKey =
-      PropertiesService.getScriptProperties().getProperty("GeminiApiKey");
+    else if (prompt_template == "get_school_translate_prompt"){
+      prompt = get_school_translate_prompt(text);
+    }
     if (!apiKey) {
       Logger.log("Gemini API key is not set in script properties.");
       return null;
@@ -150,9 +163,8 @@ function extractInfoByGemini(text, prompt_template = "") {
     // The response from Gemini is inside a nested structure.
     // We'll extract the text and parse it if it's a JSON string.
     const extractedText = result.candidates[0].content.parts[0].text;
-    // The model might return the JSON inside a markdown code block, so we clean it.
-    const jsonInfo = JSON.parse(extractedText.replace(/```json\n|```/g, ""));
     if (prompt_template == "get_rewe_bills_prompt"){
+      const jsonInfo = JSON.parse(extractedText.replace(/```json\n|```/g, ""));
       const listInfo = [[
             jsonInfo["date"],
             jsonInfo["Store name"],
@@ -164,6 +176,7 @@ function extractInfoByGemini(text, prompt_template = "") {
       return listInfo;
         }
     else if (prompt_template == "get_payslips_prompt"){
+      const jsonInfo = JSON.parse(extractedText.replace(/```json\n|```/g, ""));
       const listInfo = jsonInfo.map(item => [
         item.date,
         item.Description,
@@ -172,6 +185,9 @@ function extractInfoByGemini(text, prompt_template = "") {
         item.Category
       ]);
       return listInfo;
+    }
+    else if (prompt_template == "get_school_translate_prompt"){
+      return extractedText;
     }
     else {
     return null;
@@ -257,9 +273,14 @@ function AppendDataToSheet(newData, EXCEL_NAME = "") {
 
 /**
  * Processes REWE emails, stars them, and saves attachments to Google Drive.
- * @returns {{newEmailCount: number, oldEmailCount: number, savedAttachmentCount: number}} An object with counts of processed emails and attachments.
+ * @returns {{newEmailCount: number,
+ *            oldEmailCount: number, 
+ *            savedAttachmentCount: number,
+ *            schoolEmailList: List,
+ *            }} An object with counts of processed emails and attachments.
  */
 function processMails() {
+  /** setup for Rewe Bills */
   const currentDate = getCurrentDate();
   const threads = GmailApp.getInboxThreads();
   let newEmailCount = 0;
@@ -271,10 +292,13 @@ function processMails() {
     ? folders.next()
     : DriveApp.createFolder(DRIVE_FOLDER_NAME);
 
+  /** setup for School Emails */
+  let schoolEmailList = [];
+
   for (const thread of threads) {
     const firstMessage = thread.getMessages()[0];
-    const subject = firstMessage.getSubject();
-    if (subject.includes(EMAIL_SUBJECT_FILTER)) {
+    const fromMail = firstMessage.getFrom();
+    if (fromMail.includes(REWE_BILLS_FROM_EMAIL)) {
       if (firstMessage.isStarred()) {
         oldEmailCount++;
       } else {
@@ -295,14 +319,32 @@ function processMails() {
         }
       }
     }
+    else if (fromMail.includes(SCHOOL_FROM_EMAIL)){
+      if (firstMessage.isStarred()) {
+      } else{
+        subject = firstMessage.getSubject();
+        body_content = firstMessage.getPlainBody();
+        attachments = firstMessage.getAttachments();
+        final_content = extractInfoByGemini(body_content, "get_school_translate_prompt");
+        for (const [index, attachment] of attachments.entries()) {
+          const att_text = extractTextFromAttachment(attachment);
+          final_content += "\n This mail has as attachment." + extractInfoByGemini(att_text, "get_school_translate_prompt");
+        }
+        schoolEmailList.push({
+          subject: subject,
+          content: final_content
+        });
+        firstMessage.star();
+      }
+      }
   }
   return {
     newEmailCount,
     oldEmailCount,
     savedAttachmentCount,
+    schoolEmailList
   };
 }
-
 function processDocsInAFolder(DRIVE_FOLDER_NAME) {
   let oldFileCount = 0;
   let staredFileCount = 0;
@@ -355,12 +397,26 @@ function dailyReweSchedule() {
   const currentDate = getCurrentDate();
   Logger.log(`Email bills Processing for: ${currentDate}`);
 
-  const { newEmailCount, oldEmailCount, savedAttachmentCount } =
+  const { newEmailCount, oldEmailCount, savedAttachmentCount, schoolEmailList } =
     processMails();
 
-  const teleMessage = `Email bills Processing report for:${currentDate}: New Emails Count : ${newEmailCount} Already in Emails Count: ${oldEmailCount} Uploaded Files Count : ${savedAttachmentCount}`;
-  sendTelegramMessage(teleMessage);
+  const teleMessage = `Email bills Processing report for:${currentDate}\n
+                       New Emails Count : ${newEmailCount}\n
+                       Already in Emails Count: ${oldEmailCount}\n
+                       Uploaded Files Count : ${savedAttachmentCount}`;
+  sendTelegramMessage(teleMessage, dev_token, chatId);
   Logger.log(`Completed: ${teleMessage}`);
+  // Send school emails summary
+  if (schoolEmailList.length > 0) {
+    let schoolMessage = `School Emails Summary for: ${currentDate}:\n\n`;
+    schoolEmailList.forEach((email, index) => {
+      schoolMessage += `Email ${index + 1}:\n
+                        Subject: ${email.subject}\n
+                        Content:\n${email.content}\n\n`;
+    });
+    sendTelegramMessage(schoolMessage, school_token, chatId);
+    Logger.log(`Sent school emails summary.`);
+  }
 }
 
 /**
@@ -374,7 +430,7 @@ function dailyManualBillsSchedule() {
   const teleMessage = `Manual Bills Processing report for:${currentDate}: \n
                         Uploaded Files Count : ${staredFileCount} \n
                         Already in Drive Count: ${oldFileCount}`;
-  sendTelegramMessage(teleMessage);
+  sendTelegramMessage(teleMessage, dev_token, chatId);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
@@ -390,7 +446,7 @@ function monthlyPayslipsSchedule() {
   const teleMessage = `Monthly Payslips Processing report for:${currentDate}: \n
                        Uploaded Files Count : ${staredFileCount} \n
                        Already in Drive Count: ${oldFileCount}`;
-  sendTelegramMessage(teleMessage);
+  sendTelegramMessage(teleMessage, dev_token, chatId);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
@@ -402,7 +458,6 @@ function dailyTrigger(){
   dailyReweSchedule();
   dailyManualBillsSchedule();
 }
-
 
 /**
  * Function to trigger Monthly
