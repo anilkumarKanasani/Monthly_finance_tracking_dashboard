@@ -1,5 +1,5 @@
 const SCRIPT_PROPERTIES = {
-  DevTelegramToken: "TelegramToken",
+  DevTelegramToken: "DevTelegramToken",
   SchoolTelegramToken: "SchoolTelegramToken",
   GeminiApiKey: "GeminiApiKey",
   ChatID: "ChatID",
@@ -97,7 +97,7 @@ function getCurrentDate() {
  * Sends a message to a Telegram chat.
  * @param {string} message The text message to send.
  */
-function sendTelegramMessage(message, token, chatId) {
+function sendTelegramMessage(message, token) {
   if (!token || !chatId) {
     Logger.log("Telegram token or chat ID is not set in script properties.");
     return;
@@ -380,9 +380,13 @@ function processDocsInAFolder(DRIVE_FOLDER_NAME) {
         
         const listInfo = extractInfoByGemini(extractedText, prompt);
         AppendDataToSheet(listInfo, excel_name );
-        Logger.log(`Extracted Info: ${listInfo}`);
+        if (DRIVE_FOLDER_NAME == MANUAL_BILLS_DRIVE_FOLDER_NAME){
+          Logger.log(`Extracted Info: ${listInfo}`);
         }
-
+        else if (DRIVE_FOLDER_NAME == PAYSLIPS_DRIVE_FOLDER_NAME){
+          Logger.log(`Extracted Monthly paysip information`);
+        }
+      }
       }
     }
   return { staredFileCount, oldFileCount };
@@ -404,7 +408,7 @@ function dailyReweSchedule() {
                        New Emails Count : ${newEmailCount}\n
                        Already in Emails Count: ${oldEmailCount}\n
                        Uploaded Files Count : ${savedAttachmentCount}`;
-  sendTelegramMessage(teleMessage, dev_token, chatId);
+  sendTelegramMessage(teleMessage, dev_token);
   Logger.log(`Completed: ${teleMessage}`);
   // Send school emails summary
   if (schoolEmailList.length > 0) {
@@ -414,7 +418,7 @@ function dailyReweSchedule() {
                         Subject: ${email.subject}\n
                         Content:\n${email.content}\n\n`;
     });
-    sendTelegramMessage(schoolMessage, school_token, chatId);
+    sendTelegramMessage(schoolMessage, school_token);
     Logger.log(`Sent school emails summary.`);
   }
 }
@@ -430,7 +434,7 @@ function dailyManualBillsSchedule() {
   const teleMessage = `Manual Bills Processing report for:${currentDate}: \n
                         Uploaded Files Count : ${staredFileCount} \n
                         Already in Drive Count: ${oldFileCount}`;
-  sendTelegramMessage(teleMessage, dev_token, chatId);
+  sendTelegramMessage(teleMessage, dev_token);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
@@ -446,7 +450,7 @@ function monthlyPayslipsSchedule() {
   const teleMessage = `Monthly Payslips Processing report for:${currentDate}: \n
                        Uploaded Files Count : ${staredFileCount} \n
                        Already in Drive Count: ${oldFileCount}`;
-  sendTelegramMessage(teleMessage, dev_token, chatId);
+  sendTelegramMessage(teleMessage, dev_token);
   Logger.log(`Completed: ${teleMessage}`);
 }
 
