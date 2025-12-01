@@ -14,12 +14,11 @@ const apiKey = scriptProperties.getProperty(SCRIPT_PROPERTIES.GeminiApiKey);
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
 const MANUAL_BILLS_DRIVE_FOLDER_NAME = "Manual_bills";
 const REWE_BILLS_FROM_EMAIL = "ebon@mailing.rewe.de"; // Using a constant for this is a good practice
-const REWE_BILLS_EXCEL_NAME = "Rewe_Bills_Overview";
 
 const SCHOOL_FROM_EMAIL = "franklinschule";
 
 const PAYSLIPS_DRIVE_FOLDER_NAME = "2026";
-const PAYSLIPS_EXCEL_NAME = "2026_at_a_glance";
+const EXCEL_NAME = "2026_at_a_glance";
 
 
 function get_rewe_bills_prompt(text){
@@ -242,7 +241,7 @@ function extractTextFromAttachment(attachment) {
  * Writes sample data to a Google Sheet.
  * @param {Array<Array>} newData The new data to write to the sheet.
  */
-function AppendDataToSheet(newData, EXCEL_NAME = "") {
+function AppendDataToSheet(newData, TRACKING = "germany_tracking") {
   try {
     const excelFile = DriveApp.getFilesByName(EXCEL_NAME);
     if (!excelFile.hasNext()) {
@@ -252,14 +251,26 @@ function AppendDataToSheet(newData, EXCEL_NAME = "") {
 
     const file = excelFile.next();
     const spreadsheet = SpreadsheetApp.openById(file.getId());
-    let sheet = spreadsheet.getSheets()[0];
+    let sheet;
+    if (TRACKING === "germany_tracking") {
+      sheet = spreadsheet.getSheets()[0];
+    } else if (TRACKING === "rewe_bills") {
+      sheet = spreadsheet.getSheets()[1];
+    } else {
+      throw new RangeError(`Invalid TRACKING parameter: "${TRACKING}". No sheet found.`);
+    }
 
     if (!sheet) {
-      Logger.log(`No sheets found in the spreadsheet "${EXCEL_NAME}".`);
+      Logger.log(`Sheet not found in spreadsheet "${EXCEL_NAME}" for TRACKING type "${TRACKING}".`);
+      return;
     }
 
     // Append new data to existing data
     const existingData = sheet.getDataRange().getValues();
+    if (newData === null || newData.length === 0) {
+      Logger.log("No new data to append.");
+      return;
+    }
     const AllData = existingData.concat(newData);
     sheet.clearContents(); // This is inefficient for large sheets. Consider appending.
     sheet.getRange(1, 1, AllData.length, AllData[0].length).setValues(AllData); // This might fail if AllData is empty
@@ -313,7 +324,7 @@ function processMails() {
           const extractedText = extractTextFromAttachment(attachment);
           if (extractedText) {
             const listInfo = extractInfoByGemini(extractedText, "get_rewe_bills_prompt");
-            AppendDataToSheet(listInfo, REWE_BILLS_EXCEL_NAME);
+            AppendDataToSheet(listInfo, "rewe_bills");
             Logger.log(`Extracted Info: ${listInfo}`);
           }
         }
@@ -370,16 +381,16 @@ function processDocsInAFolder(DRIVE_FOLDER_NAME) {
       if (extractedText) {
         if (DRIVE_FOLDER_NAME == MANUAL_BILLS_DRIVE_FOLDER_NAME){
           prompt = "get_rewe_bills_prompt"
-          excel_name = REWE_BILLS_EXCEL_NAME
+          tracking = "rewe_bills"
         }
         else if (DRIVE_FOLDER_NAME == PAYSLIPS_DRIVE_FOLDER_NAME){
 
           prompt = "get_payslips_prompt"
-          excel_name = PAYSLIPS_EXCEL_NAME
+          tracking = "germany_tracking"
         }
         
         const listInfo = extractInfoByGemini(extractedText, prompt);
-        AppendDataToSheet(listInfo, excel_name );
+        AppendDataToSheet(listInfo, tracking);
         if (DRIVE_FOLDER_NAME == MANUAL_BILLS_DRIVE_FOLDER_NAME){
           Logger.log(`Extracted Info: ${listInfo}`);
         }
