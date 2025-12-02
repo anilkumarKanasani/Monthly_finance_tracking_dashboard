@@ -14,8 +14,8 @@ const apiKey = scriptProperties.getProperty(SCRIPT_PROPERTIES.GeminiApiKey);
 const DRIVE_FOLDER_NAME = "Rewe_Bills";
 const MANUAL_BILLS_DRIVE_FOLDER_NAME = "Manual_bills";
 const REWE_BILLS_FROM_EMAIL = "ebon@mailing.rewe.de"; // Using a constant for this is a good practice
-
 const SCHOOL_FROM_EMAIL = "franklinschule";
+const AMEX_FROM_EMAIL = "americanexpress";
 
 const PAYSLIPS_DRIVE_FOLDER_NAME = "2026";
 const EXCEL_NAME = "2026_at_a_glance";
@@ -80,6 +80,13 @@ function get_school_translate_prompt(text){
                   ${text}`;
   }
 
+  function get_amex_prompt(text){
+    return  `From the following email body text, extract the information and return it as a JSON object.
+            The JSON object must have these keys: "date", "Store name", "bill amount".
+            For Example: {"data": 29.11.2025, "Store name": ALDI SUED", "bill amount": 2.81}
+            Email Body:
+            ${text}`;
+  }
 /**
  * Gets the current date formatted as YYYY_MM_DD.
  * @returns {string} The formatted date string.
@@ -129,6 +136,10 @@ function extractInfoByGemini(text, prompt_template = "") {
     else if (prompt_template == "get_school_translate_prompt"){
       prompt = get_school_translate_prompt(text);
     }
+    else if (prompt_template == "get_amex_prompt"){
+      prompt = get_amex_prompt(text);
+    }
+
     if (!apiKey) {
       Logger.log("Gemini API key is not set in script properties.");
       return null;
@@ -187,6 +198,17 @@ function extractInfoByGemini(text, prompt_template = "") {
     }
     else if (prompt_template == "get_school_translate_prompt"){
       return extractedText;
+    }
+    else if (prompt_template == "get_amex_prompt"){
+      const jsonInfo = JSON.parse(extractedText.replace(/```json\n|```/g, ""));
+      const listInfo = [[
+            jsonInfo["date"],
+            jsonInfo["Store name"],
+            0,
+            parseFloat(jsonInfo["bill amount"]),
+            "Eating"
+          ]];
+      return listInfo;
     }
     else {
     return null;
@@ -310,6 +332,8 @@ function processMails() {
   /** setup for School Emails */
   let schoolEmailList = [];
 
+  /** setup for Amex Emails count */
+  let amexEmaiCount = 0;
   for (const thread of threads) {
     const firstMessage = thread.getMessages()[0];
     const threadLabels = thread.getLabels();
@@ -359,11 +383,22 @@ function processMails() {
         thread.addLabel(processedLabel);
       }
       }
+      else if (fromMail.includes(AMEX_FROM_EMAIL)){
+        if (!isProcessed) {
+          body_content = firstMessage.getPlainBody();
+          const listInfo = extractInfoByGemini(body_content, "get_amex_prompt");
+          AppendDataToSheet(listInfo, "germany_tracking");
+          Logger.log(`Extracted Info: ${listInfo}`);
+          thread.addLabel(processedLabel);
+          amexEmaiCount++;
+        }
+  }
   }
   return {
     newEmailCount,
     oldEmailCount,
     savedAttachmentCount,
+    amexEmaiCount,
     schoolEmailList
   };
 }
@@ -423,7 +458,7 @@ function dailyReweSchedule() {
   const currentDate = getCurrentDate();
   Logger.log(`Email bills Processing for: ${currentDate}`);
 
-  const { newEmailCount, oldEmailCount, savedAttachmentCount, schoolEmailList } =
+  const { newEmailCount, oldEmailCount, savedAttachmentCount, amexEmaiCount, schoolEmailList } =
     processMails();
 
   const teleMessage = `Email bills Processing report for:${currentDate}\n
@@ -432,6 +467,18 @@ function dailyReweSchedule() {
                        Uploaded Files Count : ${savedAttachmentCount}`;
   sendTelegramMessage(teleMessage, dev_token);
   Logger.log(`Completed: ${teleMessage}`);
+
+  // Send amex emails Count
+  let amexMessage;
+  if (amexEmaiCount > 0) {
+    amexMessage = `Amex bills Processing report for:${currentDate}\n
+                      New Emails Count : ${amexEmaiCount}`;
+  } else {
+    amexMessage = `No Amex Emails.`;
+  }
+  sendTelegramMessage(amexMessage, dev_token);
+  Logger.log(`Sent amex emails summary.`);
+
   // Send school emails summary
   if (schoolEmailList.length > 0) {
     let schoolMessage = `School Emails Summary for: ${currentDate}:\n\n`;
@@ -484,6 +531,7 @@ function dailyTrigger(){
   dailyReweSchedule();
   dailyManualBillsSchedule();
 }
+
 
 /**
  * Function to trigger Monthly
