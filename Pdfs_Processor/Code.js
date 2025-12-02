@@ -252,25 +252,23 @@ function AppendDataToSheet(newData, TRACKING = "germany_tracking") {
     const file = excelFile.next();
     const spreadsheet = SpreadsheetApp.openById(file.getId());
     let sheet;
-    if (TRACKING === "germany_tracking") {
+    if (TRACKING === "germany_tracking"){
       sheet = spreadsheet.getSheets()[0];
-    } else if (TRACKING === "rewe_bills") {
+    }
+    else if (TRACKING === "rewe_bills"){ 
       sheet = spreadsheet.getSheets()[1];
-    } else {
-      throw new RangeError(`Invalid TRACKING parameter: "${TRACKING}". No sheet found.`);
+    }
+    else{
+      throw new RangeError("No sheet found for TRACKING: " + TRACKING);
     }
 
     if (!sheet) {
-      Logger.log(`Sheet not found in spreadsheet "${EXCEL_NAME}" for TRACKING type "${TRACKING}".`);
+      Logger.log(`Sheet not found in "${EXCEL_NAME}" for TRACKING: ${TRACKING}.`);
       return;
     }
 
     // Append new data to existing data
     const existingData = sheet.getDataRange().getValues();
-    if (newData === null || newData.length === 0) {
-      Logger.log("No new data to append.");
-      return;
-    }
     const AllData = existingData.concat(newData);
     sheet.clearContents(); // This is inefficient for large sheets. Consider appending.
     sheet.getRange(1, 1, AllData.length, AllData[0].length).setValues(AllData); // This might fail if AllData is empty
@@ -298,6 +296,12 @@ function processMails() {
   let oldEmailCount = 0;
   let savedAttachmentCount = 0;
 
+  // Get or create the "processed" label
+  const processedLabelName = "processed_bills";
+  let processedLabel = GmailApp.getUserLabelByName(processedLabelName);
+  if (!processedLabel) {
+    processedLabel = GmailApp.createLabel(processedLabelName);
+  }
   const folders = DriveApp.getFoldersByName(DRIVE_FOLDER_NAME);
   const billsFolder = folders.hasNext()
     ? folders.next()
@@ -308,12 +312,20 @@ function processMails() {
 
   for (const thread of threads) {
     const firstMessage = thread.getMessages()[0];
+    const threadLabels = thread.getLabels();
+    let isProcessed = false;
+    for (const label of threadLabels) {
+      if (label.getName() === processedLabelName) {
+        isProcessed = true;
+        break;
+      }
+    }
     const fromMail = firstMessage.getFrom();
     if (fromMail.includes(REWE_BILLS_FROM_EMAIL)) {
-      if (firstMessage.isStarred()) {
+      if (isProcessed) {
         oldEmailCount++;
       } else {
-        firstMessage.star();
+        thread.addLabel(processedLabel);
         newEmailCount++;
         const attachments = firstMessage.getAttachments();
         for (const [index, attachment] of attachments.entries()) {
@@ -331,8 +343,7 @@ function processMails() {
       }
     }
     else if (fromMail.includes(SCHOOL_FROM_EMAIL)){
-      if (firstMessage.isStarred()) {
-      } else{
+      if (!isProcessed) {
         subject = firstMessage.getSubject();
         body_content = firstMessage.getPlainBody();
         attachments = firstMessage.getAttachments();
@@ -345,7 +356,7 @@ function processMails() {
           subject: subject,
           content: final_content
         });
-        firstMessage.star();
+        thread.addLabel(processedLabel);
       }
       }
   }
