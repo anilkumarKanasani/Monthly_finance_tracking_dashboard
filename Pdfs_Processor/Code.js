@@ -454,19 +454,27 @@ function processDocsInAFolder(DRIVE_FOLDER_NAME) {
  * Main function to be scheduled daily.
  * It processes emails and sends a summary report to Telegram.
  */
-function dailyReweSchedule() {
+function dailyEmailSchedule() {
   const currentDate = getCurrentDate();
   Logger.log(`Email bills Processing for: ${currentDate}`);
 
   const { newEmailCount, oldEmailCount, savedAttachmentCount, amexEmaiCount, schoolEmailList } =
     processMails();
 
-  const teleMessage = `Email bills Processing report for:${currentDate}\n
+  // Send Rewe emails Count
+  let reweMessage
+  if (newEmailCount > 0) {
+      reweMessage = `Email bills Processing report for:${currentDate}\n
                        New Emails Count : ${newEmailCount}\n
                        Already in Emails Count: ${oldEmailCount}\n
                        Uploaded Files Count : ${savedAttachmentCount}`;
-  sendTelegramMessage(teleMessage, dev_token);
-  Logger.log(`Completed: ${teleMessage}`);
+  }
+  else {
+    reweMessage = `No new Rewe bills by emails.`;
+  }
+  sendTelegramMessage(reweMessage, dev_token);
+  Logger.log(`Rewe bill Emails processing Completed: ${newEmailCount}`);
+
 
   // Send amex emails Count
   let amexMessage;
@@ -477,19 +485,23 @@ function dailyReweSchedule() {
     amexMessage = `No Amex Emails.`;
   }
   sendTelegramMessage(amexMessage, dev_token);
-  Logger.log(`Sent amex emails summary.`);
+  Logger.log(`Sent amex emails summary: ${amexEmaiCount}`);
+
 
   // Send school emails summary
+  let schoolMessage = `School Emails Summary for: ${currentDate}:\n\n`;
   if (schoolEmailList.length > 0) {
-    let schoolMessage = `School Emails Summary for: ${currentDate}:\n\n`;
     schoolEmailList.forEach((email, index) => {
       schoolMessage += `Email ${index + 1}:\n
                         Subject: ${email.subject}\n
                         Content:\n${email.content}\n\n`;
     });
-    sendTelegramMessage(schoolMessage, school_token);
-    Logger.log(`Sent school emails summary.`);
   }
+  else{
+    schoolMessage = schoolMessage + `No school emails.`;
+  }
+  sendTelegramMessage(schoolMessage, school_token);
+  Logger.log(`Sent school emails summary: ${schoolEmailList.length}`);
 }
 
 /**
@@ -528,7 +540,7 @@ function monthlyPayslipsSchedule() {
  * Function to trigger Daily
  */
 function dailyTrigger(){
-  dailyReweSchedule();
+  dailyEmailSchedule();
   dailyManualBillsSchedule();
 }
 
